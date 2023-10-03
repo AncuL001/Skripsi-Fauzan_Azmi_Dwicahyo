@@ -86,6 +86,7 @@ class CoCoDatasetForYOLO(CocoDetection):
                 label_matrix[i, j, self.C+1:self.C+5] = box_coordinates
 
                 # Set one hot encoding for class_label
-                label_matrix[i, j, class_label] = 1
+                # We only have one class here, which is just litter
+                label_matrix[i, j, 0] = 1
 
         return image, label_matrix
