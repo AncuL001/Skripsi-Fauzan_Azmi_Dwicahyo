@@ -7,3 +7,12 @@ pandas
 pillow
 ipykernel
 tensorboard
+requests
+jupyter
+seaborn
+graphviz
+Cython
+pycocotools
+scikit-image
+keras
+tensorflow
