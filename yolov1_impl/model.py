@@ -13,6 +13,27 @@ Tuple is structured by (kernel_size, filters, stride, padding)
 List is structured by tuples and lastly int with number of repeats
 """
 
+# # small version for testing
+# architecture_config = [
+#     (7, 8, 2, 3),                       # (kernel_size, filters, stride, padding)
+#     "M",                                 # Maxpooling
+#     (3, 16, 1, 1),
+#     "M",
+#     (1, 12, 1, 0),
+#     (3, 32, 1, 1),
+#     (1, 32, 1, 0),
+#     "M",
+#     (1, 32, 1, 0),
+#     (1, 32, 1, 0),
+#     (1, 32, 1, 0),
+#     (1, 32, 1, 0),
+#     (1, 32, 1, 0),
+#     "M",
+#     (1, 32, 1, 0),
+#     (1, 64, 1, 0),
+#     (3, 64, 2, 1),
+# ]
+
 architecture_config = [
     (7, 64, 2, 3),                       # (kernel_size, filters, stride, padding)
     "M",                                 # Maxpooling
@@ -108,6 +129,15 @@ class YoloV1(nn.Module):
         # nn.Linear(1024*S*S, 4096),
         # nn.LeakyReLU(0.1),
         # nn.Linear(4096, S*S*(B*5+C))
+
+        # # small version for testing
+        # return nn.Sequential(
+        #     nn.Flatten(),
+        #     nn.Linear(64 * S * S, 128),
+        #     nn.Dropout(0.0),
+        #     nn.LeakyReLU(0.1),
+        #     nn.Linear(128, S * S * (C + B * 5)),
+        # )
 
         return nn.Sequential(
             nn.Flatten(),
