@@ -28,10 +28,10 @@ torch.manual_seed(seed)
 
 # Hyperparameters etc. 
 LEARNING_RATE = 2e-5
-DEVICE = "cpu"
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 16 # 64 in original paper but I don't have that much vram, grad accum?
 WEIGHT_DECAY = 0
-EPOCHS = 5
+EPOCHS = 100
 NUM_WORKERS = 2
 PIN_MEMORY = True
 LOAD_MODEL = False
@@ -90,7 +90,7 @@ def main():
     )
 
     test_dataset = VOCDataset(
-        f"{FOLDER_DIR}/test.csv",
+        f"{FOLDER_DIR}/8examples.csv",
         transform=transform,
         img_dir=f"{FOLDER_DIR}/images",
         label_dir=f"{FOLDER_DIR}/labels",
