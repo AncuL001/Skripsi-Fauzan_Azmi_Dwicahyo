@@ -3,6 +3,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from collections import Counter
+from PIL import Image, ExifTags
+
+def get_correctly_rotated_image(image: Image) -> Image:
+    orientation = ExifTags.Base.Orientation
+
+    # Create a Rectangle potch
+    if image.getexif():
+        exif = dict(image.getexif().items())
+        # Rotate portrait and upside down images if necessary
+        if orientation in exif:
+            if exif[orientation] == 3:
+                image = image.rotate(180,expand=True)
+            if exif[orientation] == 6:
+                image = image.rotate(270,expand=True)
+            if exif[orientation] == 8:
+                image = image.rotate(90,expand=True)
+
+    return image
 
 def intersection_over_union(boxes_preds, boxes_labels, box_format="midpoint"):
     """

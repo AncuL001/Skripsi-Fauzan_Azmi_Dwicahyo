@@ -4,6 +4,9 @@ Creates a Pytorch dataset to load the TACO dataset
 
 import torch
 from torchvision.datasets import CocoDetection
+from utils import (
+    get_correctly_rotated_image
+)
 
 class CoCoDatasetForYOLO(CocoDetection):
     """
@@ -31,6 +34,8 @@ class CoCoDatasetForYOLO(CocoDetection):
         id = self.ids[index]
         image = self._load_image(id)
         target = self._load_target(id)
+
+        image = get_correctly_rotated_image(image)
 
         img_width, img_height = image.size
         boxes = []
