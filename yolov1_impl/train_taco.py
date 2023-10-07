@@ -37,72 +37,77 @@ class Compose(object):
 
 transform = Compose([transforms.Resize((448, 448)), transforms.ToTensor(),])
 
-model = YoloV1(split_size=7, num_boxes=2, num_classes=1).to(DEVICE)
-optimizer = optim.Adam(
-    model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
-)
-loss_fn = YoloLoss(S=7, B=2, C=1)
+def main():
+    model = YoloV1(split_size=7, num_boxes=2, num_classes=1).to(DEVICE)
+    optimizer = optim.Adam(
+        model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
+    )
+    loss_fn = YoloLoss(S=7, B=2, C=1)
 
-dataset = CoCoDatasetForYOLO(
-    root=DATASET_PATH,
-    annFile=anns_file_path,
-    transform=transform,
-    C=1
-)
-
-# # for testing with a small dataset
-# training_portion = list(range(0, 32))
-# testing_portion = list(range(32, 64))
-# train_dataset = torch.utils.data.Subset(dataset, training_portion)
-# test_dataset = torch.utils.data.Subset(dataset, testing_portion)
-
-train_percentage = 0.8
-train_size = int(train_percentage * len(dataset))
-test_size = len(dataset) - train_size
-train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
-
-train_loader = DataLoader(
-    dataset=train_dataset,
-    batch_size=BATCH_SIZE,
-    num_workers=NUM_WORKERS,
-    pin_memory=PIN_MEMORY,
-    shuffle=True,
-    drop_last=True,
-)
-
-test_loader = DataLoader(
-    dataset=test_dataset,
-    batch_size=BATCH_SIZE,
-    num_workers=NUM_WORKERS,
-    pin_memory=PIN_MEMORY,
-    shuffle=True,
-    drop_last=True,
-)
-
-for epoch in range(EPOCHS):
-    pred_boxes, target_boxes = get_bboxes(
-        train_loader, model, iou_threshold=0.5, threshold=0.4, device=DEVICE,
-        S=7, B=2, C=1
+    dataset = CoCoDatasetForYOLO(
+        root=DATASET_PATH,
+        annFile=anns_file_path,
+        transform=transform,
+        C=1
     )
 
-    mean_avg_prec = mean_average_precision(
-        pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint"
+    # # for testing with a small dataset
+    # training_portion = list(range(0, 32))
+    # testing_portion = list(range(32, 64))
+    # train_dataset = torch.utils.data.Subset(dataset, training_portion)
+    # test_dataset = torch.utils.data.Subset(dataset, testing_portion)
+
+    train_percentage = 0.8
+    train_size = int(train_percentage * len(dataset))
+    test_size = len(dataset) - train_size
+    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+
+    train_loader = DataLoader(
+        dataset=train_dataset,
+        batch_size=BATCH_SIZE,
+        num_workers=NUM_WORKERS,
+        pin_memory=PIN_MEMORY,
+        shuffle=True,
+        drop_last=True,
     )
-    print(f"Train mAP: {mean_avg_prec}")
 
-    loop = tqdm(train_loader, leave=True)
-    mean_loss = []
+    test_loader = DataLoader(
+        dataset=test_dataset,
+        batch_size=BATCH_SIZE,
+        num_workers=NUM_WORKERS,
+        pin_memory=PIN_MEMORY,
+        shuffle=True,
+        drop_last=True,
+    )
 
-    for batch_idx, (x, y) in enumerate(loop):
-        x, y = x.to(DEVICE), y.to(DEVICE)
-        out = model(x)
-        loss = loss_fn(out, y)
-        mean_loss.append(loss.item())
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+    for epoch in range(EPOCHS):
+        pred_boxes, target_boxes = get_bboxes(
+            train_loader, model, iou_threshold=0.5, threshold=0.4, device=DEVICE,
+            S=7, B=2, C=1
+        )
 
-        # update progress bar
-        loop.set_postfix(loss=loss.item())
+        mean_avg_prec = mean_average_precision(
+            pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint"
+        )
+        print(f"Train mAP: {mean_avg_prec}")
 
-    print(f"Mean loss was {sum(mean_loss)/len(mean_loss)}")
+        loop = tqdm(train_loader, leave=True)
+        mean_loss = []
+
+        for batch_idx, (x, y) in enumerate(loop):
+            x, y = x.to(DEVICE), y.to(DEVICE)
+            out = model(x)
+            loss = loss_fn(out, y)
+            mean_loss.append(loss.item())
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            # update progress bar
+            loop.set_postfix(loss=loss.item())
+
+        print(f"Mean loss was {sum(mean_loss)/len(mean_loss)}")
+
+
+if __name__ == "__main__":
+    main()
