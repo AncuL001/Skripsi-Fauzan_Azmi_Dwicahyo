@@ -107,6 +107,9 @@ def main():
             loop.set_postfix(loss=loss.item())
 
         print(f"Mean loss was {sum(mean_loss)/len(mean_loss)}")
+    
+    model_scripted = torch.jit.script(model)
+    model_scripted.save('../downloads/yolo_v1_model.pt')
 
 
 if __name__ == "__main__":
