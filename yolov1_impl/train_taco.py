@@ -3,6 +3,7 @@ import torchvision.transforms as transforms
 import torch.optim as optim
 from tqdm import tqdm
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from model import YoloV1
 from taco_dataset import CoCoDatasetForYOLO
 from loss import YoloLoss
@@ -10,6 +11,7 @@ from utils import (
     mean_average_precision,
     get_bboxes,
 )
+import datetime
 
 LEARNING_RATE = 2e-5
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -38,6 +40,8 @@ class Compose(object):
 transform = Compose([transforms.Resize((448, 448)), transforms.ToTensor(),])
 
 def main():
+    writer = SummaryWriter()
+
     model = YoloV1(split_size=7, num_boxes=2, num_classes=1).to(DEVICE)
     optimizer = optim.Adam(
         model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
@@ -81,6 +85,36 @@ def main():
     )
 
     for epoch in range(EPOCHS):
+        loop = tqdm(train_loader, leave=True)
+        train_losses = []
+
+        for batch_idx, (x, y) in enumerate(loop):
+            x, y = x.to(DEVICE), y.to(DEVICE)
+            out = model(x)
+
+            loss = loss_fn(out, y)
+            train_losses.append(loss.item())
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            loop.set_postfix(loss=loss.item())
+
+        writer.add_scalar('loss/train', sum(train_losses)/len(train_losses), epoch)
+
+        with torch.no_grad():
+            test_losses = []
+
+            for batch_idx, (x, y) in enumerate(test_loader):
+                x, y = x.to(DEVICE), y.to(DEVICE)
+                out = model(x)
+
+                loss = loss_fn(out, y)
+                test_losses.append(loss.item())
+
+            writer.add_scalar('loss/test', sum(test_losses)/len(test_losses), epoch)
+
         pred_boxes, target_boxes = get_bboxes(
             train_loader, model, iou_threshold=0.5, threshold=0.4, device=DEVICE,
             S=7, B=2, C=1
@@ -89,28 +123,27 @@ def main():
         mean_avg_prec = mean_average_precision(
             pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint"
         )
-        print(f"Train mAP: {mean_avg_prec}")
 
-        loop = tqdm(train_loader, leave=True)
-        mean_loss = []
+        writer.add_scalar('mAP/train', mean_avg_prec, epoch)
 
-        for batch_idx, (x, y) in enumerate(loop):
-            x, y = x.to(DEVICE), y.to(DEVICE)
-            out = model(x)
-            loss = loss_fn(out, y)
-            mean_loss.append(loss.item())
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+        test_pred_boxes, test_target_boxes = get_bboxes(
+            test_loader, model, iou_threshold=0.5, threshold=0.4, device=DEVICE,
+            S=7, B=2, C=1
+        )
 
-            # update progress bar
-            loop.set_postfix(loss=loss.item())
+        test_mean_avg_prec = mean_average_precision(
+            test_pred_boxes, test_target_boxes, iou_threshold=0.5, box_format="midpoint"
+        )
 
-        print(f"Mean loss was {sum(mean_loss)/len(mean_loss)}")
-    
+        writer.add_scalar('mAP/test', test_mean_avg_prec, epoch)
+
+    writer.close()
+
     model_scripted = torch.jit.script(model)
     model_scripted.save('../downloads/yolo_v1_model.pt')
 
 
 if __name__ == "__main__":
+    print(f"Run started on {datetime.datetime.now()}")
     main()
+    print(f"Run ended on {datetime.datetime.now()}")
