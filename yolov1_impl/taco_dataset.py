@@ -42,7 +42,11 @@ class CoCoDatasetForYOLO(CocoDetection):
 
         for instance in target:
             x, y, width, height = instance['bbox']
-            boxes.append([0, x/img_width, y/img_height, width/img_width, height/img_height])
+
+            x, y, width, height = x/img_width, y/img_height, width/img_width, height/img_height
+            x, y = (width/2)+x, (height/2)+y
+
+            boxes.append([0, x, y, width, height])
 
         boxes = torch.tensor(boxes)
 
