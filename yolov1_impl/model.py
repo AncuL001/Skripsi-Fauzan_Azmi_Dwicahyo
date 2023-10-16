@@ -38,7 +38,6 @@ architecture_config = [
     (7, 64, 2, 3),                       # (kernel_size, filters, stride, padding)
     "M",                                 # Maxpooling
     (3, 192, 1, 1),
-    (3, 192, 1, 1),
     "M",
     (1, 128, 1, 0),
     (3, 256, 1, 1),
