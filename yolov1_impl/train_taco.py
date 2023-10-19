@@ -95,9 +95,17 @@ def main():
     )
     loss_fn = YoloLoss(S=7, B=2, C=1)
 
-    dataset = CoCoDatasetForYOLO(
+    train_dataset = CoCoDatasetForYOLO(
         root=DATASET_PATH,
         annFile=anns_file_path,
+        transform=train_transforms,
+        C=1
+    )
+
+    test_dataset = CoCoDatasetForYOLO(
+        root=DATASET_PATH,
+        annFile=anns_file_path,
+        transform=test_transforms,
         C=1
     )
 
@@ -108,12 +116,12 @@ def main():
     # test_dataset = torch.utils.data.Subset(dataset, testing_portion)
 
     train_percentage = 0.8
-    train_size = int(train_percentage * len(dataset))
-    test_size = len(dataset) - train_size
-    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
-    
-    train_dataset.transform = train_transforms
-    test_dataset.transform = test_transforms
+
+    indices = torch.randperm(len(train_dataset))
+    test_size = round(len(train_dataset) * (1 - train_percentage))
+
+    train_dataset = torch.utils.data.Subset(train_dataset, indices[:-test_size])
+    test_dataset = torch.utils.data.Subset(test_dataset, indices[-test_size:])
 
     train_loader = DataLoader(
         dataset=train_dataset,
