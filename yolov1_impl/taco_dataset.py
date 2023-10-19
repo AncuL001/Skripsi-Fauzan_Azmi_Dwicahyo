@@ -3,6 +3,7 @@ Creates a Pytorch dataset to load the TACO dataset
 """
 
 import torch
+import numpy as np
 from torchvision.datasets import CocoDetection
 from utils import (
     get_correctly_rotated_image
@@ -23,7 +24,7 @@ class CoCoDatasetForYOLO(CocoDetection):
         transform: transform to apply to the image
     """
     def __init__(
-        self, S=7, B=2, C=0, **kwargs
+        self, S=7, B=2, C=1, **kwargs
     ):
         super().__init__(**kwargs)
         self.S = S
@@ -36,8 +37,10 @@ class CoCoDatasetForYOLO(CocoDetection):
         target = self._load_target(id)
 
         image = get_correctly_rotated_image(image)
-
         img_width, img_height = image.size
+
+        image = np.array(image)
+
         boxes = []
 
         for instance in target:
@@ -46,17 +49,17 @@ class CoCoDatasetForYOLO(CocoDetection):
             x, y, width, height = x/img_width, y/img_height, width/img_width, height/img_height
             x, y = (width/2)+x, (height/2)+y
 
-            boxes.append([0, x, y, width, height])
-
-        boxes = torch.tensor(boxes)
+            boxes.append([x, y, width, height, 0])
 
         if self.transform:
-            image, boxes = self.transform(image, boxes)
+            augmentations = self.transform(image=image, bboxes=boxes)
+            image = augmentations["image"]
+            boxes = augmentations["bboxes"]
 
         label_matrix = torch.zeros((self.S, self.S, self.C + 5 * self.B))
 
         for box in boxes:
-            class_label, x, y, width, height = box.tolist()
+            x, y, width, height, class_label = box
             class_label = int(class_label)
 
             # i,j represents the cell row and cell column
