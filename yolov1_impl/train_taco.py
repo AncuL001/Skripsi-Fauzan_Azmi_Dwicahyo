@@ -29,17 +29,6 @@ LOAD_MODEL_FILE = "overfit.pth.tar"
 DATASET_PATH = '../downloads/TACO/data'
 anns_file_path = DATASET_PATH + '/' + 'annotations.json'
 
-class Compose(object):
-    def __init__(self, transforms):
-        self.transforms = transforms
-
-    def __call__(self, img, bboxes):
-        for t in self.transforms:
-            img, bboxes = t(img), bboxes
-
-        return img, bboxes
-
-
 IMAGE_SIZE = 448
 scale = 1.12
 
