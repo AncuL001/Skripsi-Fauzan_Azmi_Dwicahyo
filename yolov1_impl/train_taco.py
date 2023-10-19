@@ -58,7 +58,7 @@ train_transforms = A.Compose(
                 A.ShiftScaleRotate(
                     rotate_limit=20, p=0.5, border_mode=cv2.BORDER_CONSTANT
                 ),
-                A.Affine(shear=15, p=0.5, mode="constant"),
+                A.Affine(shear=15, p=0.5, mode=cv2.BORDER_CONSTANT),
             ],
             p=1.0,
         ),
