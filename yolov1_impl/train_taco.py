@@ -64,8 +64,8 @@ train_transforms = A.Compose(
     # got this error
     # Expected y_min for bbox (0.5355392156862745, -0.00015318627450980338, 0.6523692810457516, 0.1803002450980392, 0) to be in the range [0.0, 1.0], got -0.00015318627450980338.
     # rounding issue :/
-    # format="yolo" broken, "pascal_voc" doesn't seem to break, but uhh it's not a correct format
-    bbox_params=A.BboxParams(format="pascal_voc", min_visibility=0.4, label_fields=[],),
+    # the insane solution to this problem (modifying the library code) https://github.com/albumentations-team/albumentations/issues/459#issuecomment-734454278
+    bbox_params=A.BboxParams(format="yolo", min_visibility=0.4, label_fields=[],),
 )
 
 test_transforms = A.Compose(
