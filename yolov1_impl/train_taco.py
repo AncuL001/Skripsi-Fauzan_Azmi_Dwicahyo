@@ -13,6 +13,8 @@ from loss import YoloLoss
 from utils import (
     mean_average_precision,
     get_bboxes,
+    cellboxes_to_boxes,
+    non_max_suppression,
 )
 import datetime
 
@@ -31,6 +33,13 @@ anns_file_path = DATASET_PATH + '/' + 'annotations.json'
 
 IMAGE_SIZE = 448
 scale = 1.12
+
+threshold=0.4
+iou_threshold = 0.5
+box_format="midpoint"
+SPLIT_SIZE=7
+NUM_BOXES=2
+NUM_CLASSES=1
 
 train_transforms = A.Compose(
     [
@@ -83,11 +92,11 @@ test_transforms = A.Compose(
 def main():
     writer = SummaryWriter()
 
-    model = YoloV1(split_size=7, num_boxes=2, num_classes=1).to(DEVICE)
+    model = YoloV1(split_size=SPLIT_SIZE, num_boxes=NUM_BOXES, num_classes=NUM_CLASSES).to(DEVICE)
     optimizer = optim.Adam(
         model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
     )
-    loss_fn = YoloLoss(S=7, B=2, C=1)
+    loss_fn = YoloLoss(S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES)
 
     train_dataset = CoCoDatasetForYOLO(
         root=DATASET_PATH,
@@ -139,6 +148,7 @@ def main():
         loop = tqdm(train_loader, leave=True)
         train_losses = []
 
+        model.train()
         for batch_idx, (x, y) in enumerate(loop):
             x, y = x.to(DEVICE), y.to(DEVICE)
             out = model(x)
@@ -154,39 +164,62 @@ def main():
 
         writer.add_scalar('loss/train', sum(train_losses)/len(train_losses), epoch)
 
+        model.eval()
         with torch.no_grad():
             test_losses = []
 
-            for batch_idx, (x, y) in enumerate(test_loader):
-                x, y = x.to(DEVICE), y.to(DEVICE)
-                out = model(x)
+            test_pred_boxes = []
+            test_target_boxes = []
 
-                loss = loss_fn(out, y)
+            train_idx = 0
+
+            for batch_idx, (x, labels) in enumerate(test_loader):
+                x, labels = x.to(DEVICE), labels.to(DEVICE)
+                predictions = model(x)
+
+                loss = loss_fn(predictions, y)
                 test_losses.append(loss.item())
 
+                batch_size = x.shape[0]
+                true_bboxes = cellboxes_to_boxes(labels, S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES)
+                bboxes = cellboxes_to_boxes(predictions, S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES)
+
+                for idx in range(batch_size):
+                    nms_boxes = non_max_suppression(
+                        bboxes[idx],
+                        iou_threshold=iou_threshold,
+                        threshold=threshold,
+                        box_format=box_format,
+                    )
+
+                    for nms_box in nms_boxes:
+                        test_pred_boxes.append([train_idx] + nms_box)
+
+                    for box in true_bboxes[idx]:
+                        # many will get converted to 0 pred
+                        if box[1] > threshold:
+                            test_target_boxes.append([train_idx] + box)
+
+                    train_idx += 1
+
+            test_mean_avg_prec = mean_average_precision(
+                test_pred_boxes, test_target_boxes, iou_threshold=iou_threshold, box_format=box_format
+            )
+
             writer.add_scalar('loss/test', sum(test_losses)/len(test_losses), epoch)
+            writer.add_scalar('mAP/test', test_mean_avg_prec, epoch)
 
-        pred_boxes, target_boxes = get_bboxes(
-            train_loader, model, iou_threshold=0.5, threshold=0.4, device=DEVICE,
-            S=7, B=2, C=1
-        )
+        with torch.no_grad():
+            pred_boxes, target_boxes = get_bboxes(
+                train_loader, model, iou_threshold=iou_threshold, threshold=threshold, device=DEVICE,
+                S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES
+            )
 
-        mean_avg_prec = mean_average_precision(
-            pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint"
-        )
+            mean_avg_prec = mean_average_precision(
+                pred_boxes, target_boxes, iou_threshold=iou_threshold, box_format=box_format
+            )
 
-        writer.add_scalar('mAP/train', mean_avg_prec, epoch)
-
-        test_pred_boxes, test_target_boxes = get_bboxes(
-            test_loader, model, iou_threshold=0.5, threshold=0.4, device=DEVICE,
-            S=7, B=2, C=1
-        )
-
-        test_mean_avg_prec = mean_average_precision(
-            test_pred_boxes, test_target_boxes, iou_threshold=0.5, box_format="midpoint"
-        )
-
-        writer.add_scalar('mAP/test', test_mean_avg_prec, epoch)
+            writer.add_scalar('mAP/train', mean_avg_prec, epoch)
 
     writer.close()
 
