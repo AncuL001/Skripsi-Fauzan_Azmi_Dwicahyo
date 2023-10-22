@@ -49,7 +49,10 @@ class CoCoDatasetForYOLO(CocoDetection):
             x, y, width, height = x/img_width, y/img_height, width/img_width, height/img_height
             x, y = (width/2)+x, (height/2)+y
 
-            boxes.append([x, y, width, height, 0])
+            if self.C == 1:
+                boxes.append([x, y, width, height, 0])
+            else:
+                boxes.append([x, y, width, height, instance['category_id']])
 
         if self.transform:
             augmentations = self.transform(image=image, bboxes=boxes)
