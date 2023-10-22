@@ -41,6 +41,8 @@ SPLIT_SIZE=7
 NUM_BOXES=2
 NUM_CLASSES=1
 
+multiples_to_log_train_map = 5
+
 train_transforms = A.Compose(
     [
         A.LongestMaxSize(max_size=int(IMAGE_SIZE * scale)),
@@ -208,6 +210,9 @@ def main():
 
             writer.add_scalar('loss/test', sum(test_losses)/len(test_losses), epoch)
             writer.add_scalar('mAP/test', test_mean_avg_prec, epoch)
+
+        if epoch % multiples_to_log_train_map != 0:
+            continue
 
         with torch.no_grad():
             pred_boxes, target_boxes = get_bboxes(
