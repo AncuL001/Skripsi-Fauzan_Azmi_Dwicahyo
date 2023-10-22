@@ -117,8 +117,8 @@ def main():
     # # for testing with a small dataset
     # training_portion = list(range(0, 32))
     # testing_portion = list(range(32, 64))
-    # train_dataset = torch.utils.data.Subset(dataset, training_portion)
-    # test_dataset = torch.utils.data.Subset(dataset, testing_portion)
+    # train_dataset = torch.utils.data.Subset(train_dataset, training_portion)
+    # test_dataset = torch.utils.data.Subset(test_dataset, testing_portion)
 
     train_percentage = 0.8
 
