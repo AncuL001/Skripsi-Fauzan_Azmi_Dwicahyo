@@ -104,14 +104,14 @@ def main():
         root=DATASET_PATH,
         annFile=anns_file_path,
         transform=train_transforms,
-        C=1
+        C=NUM_CLASSES
     )
 
     test_dataset = CoCoDatasetForYOLO(
         root=DATASET_PATH,
         annFile=anns_file_path,
         transform=test_transforms,
-        C=1
+        C=NUM_CLASSES
     )
 
     # # for testing with a small dataset
