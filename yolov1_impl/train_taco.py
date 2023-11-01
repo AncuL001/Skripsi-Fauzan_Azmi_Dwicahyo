@@ -215,19 +215,19 @@ def main():
         S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES
     )
 
-    # for testing with a small dataset
-    training_portion = list(range(0, 32))
-    testing_portion = list(range(32, 64))
-    train_dataset = torch.utils.data.Subset(train_dataset, training_portion)
-    test_dataset = torch.utils.data.Subset(test_dataset, testing_portion)
+    # # for testing with a small dataset
+    # training_portion = list(range(0, 32))
+    # testing_portion = list(range(32, 64))
+    # train_dataset = torch.utils.data.Subset(train_dataset, training_portion)
+    # test_dataset = torch.utils.data.Subset(test_dataset, testing_portion)
 
-    # train_percentage = 0.8
+    train_percentage = 0.8
 
-    # indices = torch.randperm(len(train_dataset))
-    # test_size = round(len(train_dataset) * (1 - train_percentage))
+    indices = torch.randperm(len(train_dataset))
+    test_size = round(len(train_dataset) * (1 - train_percentage))
 
-    # train_dataset = torch.utils.data.Subset(train_dataset, indices[:-test_size])
-    # test_dataset = torch.utils.data.Subset(test_dataset, indices[-test_size:])
+    train_dataset = torch.utils.data.Subset(train_dataset, indices[:-test_size])
+    test_dataset = torch.utils.data.Subset(test_dataset, indices[-test_size:])
 
     train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer)
 
