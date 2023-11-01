@@ -7,7 +7,7 @@ import torch.optim as optim
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from model import YoloV1
+from models.yolo import YoloV1
 from taco_dataset import CoCoDatasetForYOLO
 from loss import YoloLoss
 from utils import (
@@ -43,91 +43,7 @@ NUM_CLASSES=1
 
 multiples_to_log_train_map = 5
 
-train_transforms = A.Compose(
-    [
-        A.LongestMaxSize(max_size=int(IMAGE_SIZE * scale)),
-        A.PadIfNeeded(
-            min_height=int(IMAGE_SIZE * scale),
-            min_width=int(IMAGE_SIZE * scale),
-            border_mode=cv2.BORDER_CONSTANT,
-        ),
-        A.RandomCrop(width=IMAGE_SIZE, height=IMAGE_SIZE),
-        A.ColorJitter(brightness=0.6, contrast=0.6, saturation=0.6, hue=0.6, p=0.4),
-        A.OneOf(
-            [
-                A.ShiftScaleRotate(
-                    rotate_limit=20, p=0.5, border_mode=cv2.BORDER_CONSTANT
-                ),
-                A.Affine(shear=15, p=0.5, mode=cv2.BORDER_CONSTANT),
-            ],
-            p=1.0,
-        ),
-        A.HorizontalFlip(p=0.5),
-        A.Blur(p=0.1),
-        A.CLAHE(p=0.1),
-        A.Posterize(p=0.1),
-        A.ToGray(p=0.1),
-        A.ChannelShuffle(p=0.05),
-        A.Normalize(mean=[0, 0, 0], std=[1, 1, 1], max_pixel_value=255,),
-        ToTensorV2(),
-    ],
-    
-    # got this error
-    # Expected y_min for bbox (0.5355392156862745, -0.00015318627450980338, 0.6523692810457516, 0.1803002450980392, 0) to be in the range [0.0, 1.0], got -0.00015318627450980338.
-    # rounding issue :/
-    # the insane solution to this problem (modifying the library code) https://github.com/albumentations-team/albumentations/issues/459#issuecomment-734454278
-    bbox_params=A.BboxParams(format="yolo", min_visibility=0.4, label_fields=[],),
-)
-
-test_transforms = A.Compose(
-    [
-        A.LongestMaxSize(max_size=IMAGE_SIZE),
-        A.PadIfNeeded(
-            min_height=IMAGE_SIZE, min_width=IMAGE_SIZE, border_mode=cv2.BORDER_CONSTANT
-        ),
-        A.Normalize(mean=[0, 0, 0], std=[1, 1, 1], max_pixel_value=255,),
-        ToTensorV2(),
-    ],
-    bbox_params=A.BboxParams(format="yolo", min_visibility=0.4, label_fields=[]),
-)
-
-def main():
-    writer = SummaryWriter()
-
-    model = YoloV1(split_size=SPLIT_SIZE, num_boxes=NUM_BOXES, num_classes=NUM_CLASSES).to(DEVICE)
-    optimizer = optim.Adam(
-        model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
-    )
-    loss_fn = YoloLoss(S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES)
-
-    train_dataset = CoCoDatasetForYOLO(
-        root=DATASET_PATH,
-        annFile=anns_file_path,
-        transform=train_transforms,
-        S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES
-    )
-
-    test_dataset = CoCoDatasetForYOLO(
-        root=DATASET_PATH,
-        annFile=anns_file_path,
-        transform=test_transforms,
-        S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES
-    )
-
-    # # for testing with a small dataset
-    # training_portion = list(range(0, 32))
-    # testing_portion = list(range(32, 64))
-    # train_dataset = torch.utils.data.Subset(train_dataset, training_portion)
-    # test_dataset = torch.utils.data.Subset(test_dataset, testing_portion)
-
-    train_percentage = 0.8
-
-    indices = torch.randperm(len(train_dataset))
-    test_size = round(len(train_dataset) * (1 - train_percentage))
-
-    train_dataset = torch.utils.data.Subset(train_dataset, indices[:-test_size])
-    test_dataset = torch.utils.data.Subset(test_dataset, indices[-test_size:])
-
+def train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer):
     train_loader = DataLoader(
         dataset=train_dataset,
         batch_size=BATCH_SIZE,
@@ -227,6 +143,93 @@ def main():
             writer.add_scalar('mAP/train', mean_avg_prec, epoch)
 
     writer.close()
+
+def main():
+    writer = SummaryWriter()
+
+    model = YoloV1(split_size=SPLIT_SIZE, num_boxes=NUM_BOXES, num_classes=NUM_CLASSES).to(DEVICE)
+    optimizer = optim.Adam(
+        model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
+    )
+    loss_fn = YoloLoss(S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES)
+
+    train_transforms = A.Compose(
+        [
+            A.LongestMaxSize(max_size=int(IMAGE_SIZE * scale)),
+            A.PadIfNeeded(
+                min_height=int(IMAGE_SIZE * scale),
+                min_width=int(IMAGE_SIZE * scale),
+                border_mode=cv2.BORDER_CONSTANT,
+            ),
+            A.RandomCrop(width=IMAGE_SIZE, height=IMAGE_SIZE),
+            A.ColorJitter(brightness=0.6, contrast=0.6, saturation=0.6, hue=0.6, p=0.4),
+            A.OneOf(
+                [
+                    A.ShiftScaleRotate(
+                        rotate_limit=20, p=0.5, border_mode=cv2.BORDER_CONSTANT
+                    ),
+                    A.Affine(shear=15, p=0.5, mode=cv2.BORDER_CONSTANT),
+                ],
+                p=1.0,
+            ),
+            A.HorizontalFlip(p=0.5),
+            A.Blur(p=0.1),
+            A.CLAHE(p=0.1),
+            A.Posterize(p=0.1),
+            A.ToGray(p=0.1),
+            A.ChannelShuffle(p=0.05),
+            A.Normalize(mean=[0, 0, 0], std=[1, 1, 1], max_pixel_value=255,),
+            ToTensorV2(),
+        ],
+
+        # got this error
+        # Expected y_min for bbox (0.5355392156862745, -0.00015318627450980338, 0.6523692810457516, 0.1803002450980392, 0) to be in the range [0.0, 1.0], got -0.00015318627450980338.
+        # rounding issue :/
+        # the insane solution to this problem (modifying the library code) https://github.com/albumentations-team/albumentations/issues/459#issuecomment-734454278
+        bbox_params=A.BboxParams(format="yolo", min_visibility=0.4, label_fields=[],),
+    )
+
+    test_transforms = A.Compose(
+        [
+            A.LongestMaxSize(max_size=IMAGE_SIZE),
+            A.PadIfNeeded(
+                min_height=IMAGE_SIZE, min_width=IMAGE_SIZE, border_mode=cv2.BORDER_CONSTANT
+            ),
+            A.Normalize(mean=[0, 0, 0], std=[1, 1, 1], max_pixel_value=255,),
+            ToTensorV2(),
+        ],
+        bbox_params=A.BboxParams(format="yolo", min_visibility=0.4, label_fields=[]),
+    )
+
+    train_dataset = CoCoDatasetForYOLO(
+        root=DATASET_PATH,
+        annFile=anns_file_path,
+        transform=train_transforms,
+        S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES
+    )
+
+    test_dataset = CoCoDatasetForYOLO(
+        root=DATASET_PATH,
+        annFile=anns_file_path,
+        transform=test_transforms,
+        S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES
+    )
+
+    # for testing with a small dataset
+    training_portion = list(range(0, 32))
+    testing_portion = list(range(32, 64))
+    train_dataset = torch.utils.data.Subset(train_dataset, training_portion)
+    test_dataset = torch.utils.data.Subset(test_dataset, testing_portion)
+
+    # train_percentage = 0.8
+
+    # indices = torch.randperm(len(train_dataset))
+    # test_size = round(len(train_dataset) * (1 - train_percentage))
+
+    # train_dataset = torch.utils.data.Subset(train_dataset, indices[:-test_size])
+    # test_dataset = torch.utils.data.Subset(test_dataset, indices[-test_size:])
+
+    train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer)
 
     model_scripted = torch.jit.script(model)
     model_scripted.save('../downloads/yolo_v1_model.pt')
