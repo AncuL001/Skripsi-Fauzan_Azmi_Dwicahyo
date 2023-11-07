@@ -65,7 +65,7 @@ class CNNBlock(nn.Module):
     def forward(self, x):
         return self.leakyrelu(self.batchnorm(self.conv(x)))
 
-# TODO fill time per epoch in 1660 SUPER
+# 2:22 minutes per epoch in 1660 SUPER
 class YoloV1WithAdaptiveAvgPooling(nn.Module):
     def __init__(self, in_channels=3, **kwargs):
         super(YoloV1WithAdaptiveAvgPooling, self).__init__()
