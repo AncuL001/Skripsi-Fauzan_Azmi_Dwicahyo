@@ -17,58 +17,34 @@ from utils import (
     non_max_suppression,
 )
 import datetime
+from config import Config
 
-LEARNING_RATE = 2e-5
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-BATCH_SIZE = 64 # 64 in original paper but I don't have that much vram, grad accum?
-WEIGHT_DECAY = 0
-EPOCHS = 100
-NUM_WORKERS = 2
-PIN_MEMORY = True
-LOAD_MODEL = False
-LOAD_MODEL_FILE = "overfit.pth.tar"
-
-DATASET_PATH = '../downloads/TACO/data'
-anns_file_path = DATASET_PATH + '/' + 'annotations.json'
-
-IMAGE_SIZE = 448
-scale = 1.12
-
-threshold=0.4
-iou_threshold = 0.5
-box_format="midpoint"
-SPLIT_SIZE=7
-NUM_BOXES=2
-NUM_CLASSES=1
-
-multiples_to_log_train_map = 5
-
-def train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer):
+def train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer, cfg: Config):
     train_loader = DataLoader(
         dataset=train_dataset,
-        batch_size=BATCH_SIZE,
-        num_workers=NUM_WORKERS,
-        pin_memory=PIN_MEMORY,
+        batch_size=cfg.BATCH_SIZE,
+        num_workers=cfg.NUM_WORKERS,
+        pin_memory=cfg.PIN_MEMORY,
         shuffle=True,
         drop_last=True,
     )
 
     test_loader = DataLoader(
         dataset=test_dataset,
-        batch_size=BATCH_SIZE,
-        num_workers=NUM_WORKERS,
-        pin_memory=PIN_MEMORY,
+        batch_size=cfg.BATCH_SIZE,
+        num_workers=cfg.NUM_WORKERS,
+        pin_memory=cfg.PIN_MEMORY,
         shuffle=True,
         drop_last=True,
     )
 
-    for epoch in range(EPOCHS):
+    for epoch in range(cfg.EPOCHS):
         loop = tqdm(train_loader, leave=True)
         train_losses = []
 
         model.train()
         for batch_idx, (x, y) in enumerate(loop):
-            x, y = x.to(DEVICE), y.to(DEVICE)
+            x, y = x.to(cfg.DEVICE), y.to(cfg.DEVICE)
             out = model(x)
 
             loss = loss_fn(out, y)
@@ -92,22 +68,22 @@ def train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer):
             train_idx = 0
 
             for batch_idx, (x, labels) in enumerate(test_loader):
-                x, labels = x.to(DEVICE), labels.to(DEVICE)
+                x, labels = x.to(cfg.DEVICE), labels.to(cfg.DEVICE)
                 predictions = model(x)
 
                 loss = loss_fn(predictions, y)
                 test_losses.append(loss.item())
 
                 batch_size = x.shape[0]
-                true_bboxes = cellboxes_to_boxes(labels, S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES)
-                bboxes = cellboxes_to_boxes(predictions, S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES)
+                true_bboxes = cellboxes_to_boxes(labels, S=cfg.SPLIT_SIZE, B=cfg.NUM_BOXES, C=cfg.NUM_CLASSES)
+                bboxes = cellboxes_to_boxes(predictions, S=cfg.SPLIT_SIZE, B=cfg.NUM_BOXES, C=cfg.NUM_CLASSES)
 
                 for idx in range(batch_size):
                     nms_boxes = non_max_suppression(
                         bboxes[idx],
-                        iou_threshold=iou_threshold,
-                        threshold=threshold,
-                        box_format=box_format,
+                        iou_threshold=cfg.iou_threshold,
+                        threshold=cfg.threshold,
+                        box_format=cfg.box_format,
                     )
 
                     for nms_box in nms_boxes:
@@ -115,53 +91,53 @@ def train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer):
 
                     for box in true_bboxes[idx]:
                         # many will get converted to 0 pred
-                        if box[1] > threshold:
+                        if box[1] > cfg.threshold:
                             test_target_boxes.append([train_idx] + box)
 
                     train_idx += 1
 
             test_mean_avg_prec = mean_average_precision(
-                test_pred_boxes, test_target_boxes, iou_threshold=iou_threshold, box_format=box_format
+                test_pred_boxes, test_target_boxes, iou_threshold=cfg.iou_threshold, box_format=cfg.box_format
             )
 
             writer.add_scalar('loss/test', sum(test_losses)/len(test_losses), epoch)
             writer.add_scalar('mAP/test', test_mean_avg_prec, epoch)
 
-        if epoch % multiples_to_log_train_map != 0:
+        if epoch % cfg.multiples_to_log_train_map != 0:
             continue
 
         with torch.no_grad():
             pred_boxes, target_boxes = get_bboxes(
-                train_loader, model, iou_threshold=iou_threshold, threshold=threshold, device=DEVICE,
-                S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES
+                train_loader, model, iou_threshold=cfg.iou_threshold, threshold=cfg.threshold, device=cfg.DEVICE,
+                S=cfg.SPLIT_SIZE, B=cfg.NUM_BOXES, C=cfg.NUM_CLASSES
             )
 
             mean_avg_prec = mean_average_precision(
-                pred_boxes, target_boxes, iou_threshold=iou_threshold, box_format=box_format
+                pred_boxes, target_boxes, iou_threshold=cfg.iou_threshold, box_format=cfg.box_format
             )
 
             writer.add_scalar('mAP/train', mean_avg_prec, epoch)
 
     writer.close()
 
-def main():
+def main(cfg: Config):
     writer = SummaryWriter()
 
-    model = YoloV1(split_size=SPLIT_SIZE, num_boxes=NUM_BOXES, num_classes=NUM_CLASSES).to(DEVICE)
+    model = YoloV1(split_size=cfg.SPLIT_SIZE, num_boxes=cfg.NUM_BOXES, num_classes=cfg.NUM_CLASSES).to(cfg.DEVICE)
     optimizer = optim.Adam(
-        model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
+        model.parameters(), lr=cfg.LEARNING_RATE, weight_decay=cfg.WEIGHT_DECAY
     )
-    loss_fn = YoloLoss(S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES)
+    loss_fn = YoloLoss(S=cfg.SPLIT_SIZE, B=cfg.NUM_BOXES, C=cfg.NUM_CLASSES)
 
     train_transforms = A.Compose(
         [
-            A.LongestMaxSize(max_size=int(IMAGE_SIZE * scale)),
+            A.LongestMaxSize(max_size=int(cfg.IMAGE_SIZE * cfg.scale)),
             A.PadIfNeeded(
-                min_height=int(IMAGE_SIZE * scale),
-                min_width=int(IMAGE_SIZE * scale),
+                min_height=int(cfg.IMAGE_SIZE * cfg.scale),
+                min_width=int(cfg.IMAGE_SIZE * cfg.scale),
                 border_mode=cv2.BORDER_CONSTANT,
             ),
-            A.RandomCrop(width=IMAGE_SIZE, height=IMAGE_SIZE),
+            A.RandomCrop(width=cfg.IMAGE_SIZE, height=cfg.IMAGE_SIZE),
             A.ColorJitter(brightness=0.6, contrast=0.6, saturation=0.6, hue=0.6, p=0.4),
             A.OneOf(
                 [
@@ -191,9 +167,9 @@ def main():
 
     test_transforms = A.Compose(
         [
-            A.LongestMaxSize(max_size=IMAGE_SIZE),
+            A.LongestMaxSize(max_size=cfg.IMAGE_SIZE),
             A.PadIfNeeded(
-                min_height=IMAGE_SIZE, min_width=IMAGE_SIZE, border_mode=cv2.BORDER_CONSTANT
+                min_height=cfg.IMAGE_SIZE, min_width=cfg.IMAGE_SIZE, border_mode=cv2.BORDER_CONSTANT
             ),
             A.Normalize(mean=[0, 0, 0], std=[1, 1, 1], max_pixel_value=255,),
             ToTensorV2(),
@@ -202,17 +178,17 @@ def main():
     )
 
     train_dataset = CoCoDatasetForYOLO(
-        root=DATASET_PATH,
-        annFile=anns_file_path,
+        root=cfg.DATASET_PATH,
+        annFile=cfg.anns_file_path,
         transform=train_transforms,
-        S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES
+        S=cfg.SPLIT_SIZE, B=cfg.NUM_BOXES, C=cfg.NUM_CLASSES
     )
 
     test_dataset = CoCoDatasetForYOLO(
-        root=DATASET_PATH,
-        annFile=anns_file_path,
+        root=cfg.DATASET_PATH,
+        annFile=cfg.anns_file_path,
         transform=test_transforms,
-        S=SPLIT_SIZE, B=NUM_BOXES, C=NUM_CLASSES
+        S=cfg.SPLIT_SIZE, B=cfg.NUM_BOXES, C=cfg.NUM_CLASSES
     )
 
     # # for testing with a small dataset
