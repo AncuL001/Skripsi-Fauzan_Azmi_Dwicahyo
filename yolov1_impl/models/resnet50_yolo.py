@@ -4,8 +4,6 @@ from torch import nn
 
 def resnet50_yolo(split_size, num_boxes, num_classes) -> nn.Module:
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
-    for param in model.parameters():
-        param.requires_grad = False
 
     n_inputs = model.fc.in_features
     classifier = nn.Sequential(
