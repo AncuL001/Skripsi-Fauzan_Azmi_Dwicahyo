@@ -1,7 +1,7 @@
 from torchvision.models import mobilenet_v3_large, MobileNet_V3_Large_Weights
 from torch import nn
 
-# TODO fill time per epoch on 1660 SUPER
+# 1:08 minutes per epoch on 1660 SUPER
 def mobilenet_v3_large_yolo(split_size, num_boxes, num_classes) -> nn.Module:
     model = mobilenet_v3_large(weights=MobileNet_V3_Large_Weights.DEFAULT)
 
