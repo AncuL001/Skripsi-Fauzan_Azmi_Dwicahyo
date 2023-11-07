@@ -1,9 +1,9 @@
-from torchvision.models import vgg16_bn, VGG16_BN_Weights
+from torchvision.models import vgg11_bn, VGG11_BN_Weights
 from torch import nn
 
-
-def vgg16_yolo(split_size, num_boxes, num_classes) -> nn.Module:
-    model = vgg16_bn(weights=None)
+# 5:04 minutes per epoch on 1660 SUPER
+def vgg11_yolo(split_size, num_boxes, num_classes) -> nn.Module:
+    model = vgg11_bn(weights=VGG11_BN_Weights)
     n_inputs = model.classifier[0].in_features
     classifier = nn.Sequential(
         nn.Linear(n_inputs, 4096),
