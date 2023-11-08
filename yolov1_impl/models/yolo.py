@@ -121,7 +121,7 @@ class YoloV1(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def _create_fcs(self, split_size, num_boxes, num_classes):
+    def _create_fcs(self, split_size, num_boxes, num_classes, dropout_percentage=0.0):
         S, B, C = split_size, num_boxes, num_classes
 
         # # small version for testing
@@ -136,7 +136,7 @@ class YoloV1(nn.Module):
         return nn.Sequential(
             nn.Flatten(),
             nn.Linear(1024 * S * S, 4096),
-            nn.Dropout(0.0),
+            nn.Dropout(dropout_percentage),
             nn.LeakyReLU(0.1),
             nn.Linear(4096, S * S * (C + B * 5)),
         )
