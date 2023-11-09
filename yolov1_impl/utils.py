@@ -1,5 +1,8 @@
 import torch
 from torch import nn
+from torchvision.ops import (
+    box_convert
+)
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -22,6 +25,30 @@ def get_correctly_rotated_image(image: Image) -> Image:
                 image = image.rotate(90,expand=True)
 
     return image
+
+def midpoint_to_corners(boxes):
+    """
+    Parameters:
+        boxes (tensor): Boxes (BATCH_SIZE, 4) or (4) of format (x,y,w,h)
+
+    Returns:
+        tensor: Boxes (BATCH_SIZE, 4) or (4) of format (x1,y1,x2,y2)
+    """
+
+    return box_convert(boxes, "cxcywh", "xyxy")
+
+
+def corners_to_midpoint(boxes):
+    """
+    Parameters:
+        boxes (tensor): Boxes (BATCH_SIZE, 4) or (4) of format (x1,y1,x2,y2)
+
+    Returns:
+        tensor: Boxes (BATCH_SIZE, 4) or (4) of format (x,y,w,h)
+    """
+
+    box_convert(boxes, "xyxy", "cxcywh")
+
 
 def intersection_over_union(boxes_preds, boxes_labels, box_format="midpoint"):
     """
