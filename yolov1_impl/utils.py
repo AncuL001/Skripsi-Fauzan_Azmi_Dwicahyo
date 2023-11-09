@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torchvision.ops import (
     box_convert,
-    box_iou as iou_func,
+    complete_box_iou as iou_func,
 )
 import numpy as np
 import matplotlib.pyplot as plt
