@@ -1,9 +1,9 @@
-from torchvision.models import regnet_y_3_2gf, RegNet_Y_3_2GF_Weights
+from torchvision.models import regnet_y_800mf, RegNet_Y_800MF_Weights
 from torch import nn
 
-# TODO fill minutes per epoch on 1660 SUPER
-def regnet_y_3_2gf_yolo(split_size, num_boxes, num_classes, dropout_percentage=0.0) -> nn.Module:
-    model = regnet_y_3_2gf(weights=RegNet_Y_3_2GF_Weights.DEFAULT)
+# TODO 1:07 per epoch on 1660 SUPER
+def regnet_y_800mf_yolo(split_size, num_boxes, num_classes, dropout_percentage=0.0) -> nn.Module:
+    model = regnet_y_800mf(weights=RegNet_Y_800MF_Weights.DEFAULT)
 
     n_inputs = model.fc.in_features
     classifier = nn.Sequential(
