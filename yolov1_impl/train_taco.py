@@ -215,8 +215,7 @@ def main(cfg: Config):
 
     train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer, cfg)
 
-    model_scripted = torch.jit.script(model)
-    model_scripted.save(f'{full_log_folder}/model.pt')
+    torch.save(model.state_dict(), filename=f"{full_log_folder}/model.pt")
 
 
 if __name__ == "__main__":
