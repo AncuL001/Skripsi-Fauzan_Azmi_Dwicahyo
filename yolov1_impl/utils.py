@@ -375,6 +375,10 @@ def load_checkpoint(checkpoint, model, optimizer):
     model.load_state_dict(checkpoint["state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer"])
 
+def write_to_file(text, path):
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(text)
+
 def numel(m: nn.Module, only_trainable: bool = False):
     """
     Returns the total number of parameters used by `m` (only counting

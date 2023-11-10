@@ -13,6 +13,8 @@ class Config:
     LOAD_MODEL: bool = False
     LOAD_MODEL_FILE: str = "overfit.pth.tar"
 
+    BASE_SAVE_LOG_PATH: str = "../runs"
+
     DATASET_PATH: str = '../downloads/TACO/data'
     anns_file_path: str = DATASET_PATH + '/' + 'annotations.json'
 

@@ -15,9 +15,12 @@ from utils import (
     get_bboxes,
     cellboxes_to_boxes,
     non_max_suppression,
+    write_to_file,
 )
 import datetime
 from config import Config
+from json import dumps
+from torchinfo import summary
 
 def train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer, cfg: Config):
     train_loader = DataLoader(
@@ -121,8 +124,6 @@ def train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer, c
     writer.close()
 
 def main(cfg: Config):
-    writer = SummaryWriter()
-
     model = YoloV1(split_size=cfg.SPLIT_SIZE, num_boxes=cfg.NUM_BOXES, num_classes=cfg.NUM_CLASSES).to(cfg.DEVICE)
     optimizer = optim.Adam(
         model.parameters(), lr=cfg.LEARNING_RATE, weight_decay=cfg.WEIGHT_DECAY
@@ -205,13 +206,19 @@ def main(cfg: Config):
     train_dataset = torch.utils.data.Subset(train_dataset, indices[:-test_size])
     test_dataset = torch.utils.data.Subset(test_dataset, indices[-test_size:])
 
-    train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer)
+    full_log_folder = f"{cfg.BASE_SAVE_LOG_PATH}/{model._get_name()}/{datetime.datetime.now().strftime('%Y-%d-%m_%H-%M-%S')}"
+
+    writer = SummaryWriter(log_dir=full_log_folder)
+    write_to_file(path=f"{full_log_folder}/config.txt", text=dumps(config.__dict__, indent=2))
+    write_to_file(path=f"{full_log_folder}/model_summary.txt", text=str(summary(model, input_size=(1, 3, cfg.IMAGE_SIZE, cfg.IMAGE_SIZE))))
+    write_to_file(path=f"{full_log_folder}/model_structure.txt", text=model.__str__())
+
+    train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer, cfg)
 
     model_scripted = torch.jit.script(model)
-    model_scripted.save('../downloads/yolo_v1_model.pt')
+    model_scripted.save(f'{full_log_folder}/model.pt')
 
 
 if __name__ == "__main__":
-    print(f"Run started on {datetime.datetime.now()}")
-    main()
-    print(f"Run ended on {datetime.datetime.now()}")
+    config = Config()
+    main(cfg=config)
