@@ -128,7 +128,7 @@ class YoloV1(nn.Module):
         # return nn.Sequential(
         #     nn.Flatten(),
         #     nn.Linear(64 * S * S, 128),
-        #     nn.Dropout(0.0),
+        #     nn.Dropout(dropout_percentage),
         #     nn.LeakyReLU(0.1),
         #     nn.Linear(128, S * S * (C + B * 5)),
         # )
