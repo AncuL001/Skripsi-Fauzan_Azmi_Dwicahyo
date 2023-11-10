@@ -16,6 +16,7 @@ from utils import (
     cellboxes_to_boxes,
     non_max_suppression,
     write_to_file,
+    get_stratified_indices,
 )
 import datetime
 from config import Config
@@ -200,11 +201,10 @@ def main(cfg: Config):
 
     train_percentage = 0.8
 
-    indices = torch.randperm(len(train_dataset))
-    test_size = round(len(train_dataset) * (1 - train_percentage))
+    train_indices, test_indices = get_stratified_indices(cfg.anns_file_path, len(train_dataset), train_percentage)
 
-    train_dataset = torch.utils.data.Subset(train_dataset, indices[:-test_size])
-    test_dataset = torch.utils.data.Subset(test_dataset, indices[-test_size:])
+    train_dataset = torch.utils.data.Subset(train_dataset, train_indices)
+    test_dataset = torch.utils.data.Subset(test_dataset, test_indices)
 
     full_log_folder = f"{cfg.BASE_SAVE_LOG_PATH}/{model._get_name()}/dropout-{cfg.DROPOUT}/{datetime.datetime.now().strftime('%Y-%d-%m_%H-%M-%S')}"
 

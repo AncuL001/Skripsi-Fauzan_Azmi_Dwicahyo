@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from collections import Counter
 from PIL import Image, ExifTags
+import random
+import json
 
 def get_correctly_rotated_image(image: Image) -> Image:
     orientation = ExifTags.Base.Orientation
@@ -390,3 +392,41 @@ def numel(m: nn.Module, only_trainable: bool = False):
         parameters = [p for p in parameters if p.requires_grad]
     unique = {p.data_ptr(): p for p in parameters}.values()
     return sum(p.numel() for p in unique)
+
+def get_stratified_indices(anns_file_path, dataset_size, train_percentage):
+    with open(anns_file_path, 'r') as f:
+        dataset = json.loads(f.read())
+
+    ids = set()
+
+    indexes_group_by_bg_cat = [[] for _ in range((len(dataset['scene_categories'])+1))] # the last category is for special cases
+
+    for scene_ann in dataset['scene_annotations']:
+        if scene_ann['image_id'] in ids:
+            continue
+
+        ids.add(scene_ann['image_id'])
+
+        if (len(scene_ann['background_ids']) == 1):
+            if (scene_ann['background_ids'][0] < len(dataset['scene_categories'])):
+                indexes_group_by_bg_cat[scene_ann['background_ids'][0]].append(scene_ann['image_id'])
+                continue
+
+        indexes_group_by_bg_cat[-1].append(scene_ann['image_id'])
+
+    for not_found_idx in set(i for i in range(dataset_size)) - ids:
+        indexes_group_by_bg_cat[-1].append(not_found_idx)
+
+    train_indices = []
+    test_indices = []
+
+    for i in range(len(indexes_group_by_bg_cat)):
+        random.shuffle(indexes_group_by_bg_cat[i])
+
+    for group in indexes_group_by_bg_cat:
+        test_size = round(len(group) * (1 - train_percentage))
+
+        train_indices.extend(group[:-test_size])
+        test_indices.extend(group[-test_size:])
+
+    return torch.tensor(train_indices), torch.tensor(test_indices)
