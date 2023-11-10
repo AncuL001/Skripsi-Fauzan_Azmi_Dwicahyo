@@ -124,7 +124,7 @@ def train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer, c
     writer.close()
 
 def main(cfg: Config):
-    model = YoloV1(split_size=cfg.SPLIT_SIZE, num_boxes=cfg.NUM_BOXES, num_classes=cfg.NUM_CLASSES).to(cfg.DEVICE)
+    model = YoloV1(split_size=cfg.SPLIT_SIZE, num_boxes=cfg.NUM_BOXES, num_classes=cfg.NUM_CLASSES, dropout_percentage=cfg.DROPOUT).to(cfg.DEVICE)
     optimizer = optim.Adam(
         model.parameters(), lr=cfg.LEARNING_RATE, weight_decay=cfg.WEIGHT_DECAY
     )
@@ -206,7 +206,7 @@ def main(cfg: Config):
     train_dataset = torch.utils.data.Subset(train_dataset, indices[:-test_size])
     test_dataset = torch.utils.data.Subset(test_dataset, indices[-test_size:])
 
-    full_log_folder = f"{cfg.BASE_SAVE_LOG_PATH}/{model._get_name()}/{datetime.datetime.now().strftime('%Y-%d-%m_%H-%M-%S')}"
+    full_log_folder = f"{cfg.BASE_SAVE_LOG_PATH}/{model._get_name()}/dropout-{cfg.DROPOUT}/{datetime.datetime.now().strftime('%Y-%d-%m_%H-%M-%S')}"
 
     writer = SummaryWriter(log_dir=full_log_folder)
     write_to_file(path=f"{full_log_folder}/config.txt", text=dumps(config.__dict__, indent=2))

@@ -15,6 +15,8 @@ class Config:
 
     BASE_SAVE_LOG_PATH: str = "../runs"
 
+    DROPOUT: float = 0
+
     DATASET_PATH: str = '../downloads/TACO/data'
     anns_file_path: str = DATASET_PATH + '/' + 'annotations.json'
 
