@@ -6,7 +6,7 @@ class Config:
     LEARNING_RATE: float = 2e-5
     DEVICE: str = "cuda" if torch.cuda.is_available() else "cpu"
     BATCH_SIZE: int = 64
-    WEIGHT_DECAY: float = 0
+    WEIGHT_DECAY: float = 1e-4
     EPOCHS: int = 100
     NUM_WORKERS: int = 2
     PIN_MEMORY: bool = True
