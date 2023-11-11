@@ -227,13 +227,13 @@ if __name__ == "__main__":
 
     configs = [
         base_config.replace(
-            DROPOUT=0,
+            DROPOUT=0.25,
         ),
         base_config.replace(
             DROPOUT=0.1,
         ),
         base_config.replace(
-            DROPOUT=0.25,
+            DROPOUT=0,
         ),
     ]
 
