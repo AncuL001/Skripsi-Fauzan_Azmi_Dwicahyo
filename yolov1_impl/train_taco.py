@@ -107,7 +107,7 @@ def train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer, c
             writer.add_scalar('loss/test', sum(test_losses)/len(test_losses), epoch)
             writer.add_scalar('mAP/test', test_mean_avg_prec, epoch)
 
-        if epoch % cfg.multiples_to_log_train_map != 0:
+        if epoch+1 % cfg.multiples_to_log_train_map != 0:
             continue
 
         with torch.no_grad():
