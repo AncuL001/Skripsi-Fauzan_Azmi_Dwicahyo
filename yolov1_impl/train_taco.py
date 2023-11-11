@@ -7,7 +7,7 @@ import torch.optim as optim
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from models.yolo import YoloV1
+from models.resnet34_yolo import resnet34_yolo as used_model
 from taco_dataset import CoCoDatasetForYOLO
 from loss import YoloLoss
 from utils import (
@@ -125,7 +125,7 @@ def train_loop(model, train_dataset, test_dataset, optimizer, loss_fn, writer, c
     writer.close()
 
 def main(cfg: Config):
-    model = YoloV1(split_size=cfg.SPLIT_SIZE, num_boxes=cfg.NUM_BOXES, num_classes=cfg.NUM_CLASSES, dropout_percentage=cfg.DROPOUT).to(cfg.DEVICE)
+    model = used_model(split_size=cfg.SPLIT_SIZE, num_boxes=cfg.NUM_BOXES, num_classes=cfg.NUM_CLASSES, dropout_percentage=cfg.DROPOUT).to(cfg.DEVICE)
     optimizer = optim.Adam(
         model.parameters(), lr=cfg.LEARNING_RATE, weight_decay=cfg.WEIGHT_DECAY
     )
@@ -219,5 +219,23 @@ def main(cfg: Config):
 
 
 if __name__ == "__main__":
-    config = Config()
-    main(cfg=config)
+    base_config = Config().replace(
+        EPOCHS=200,
+        BATCH_SIZE=16,
+        multiples_to_log_train_map=10,
+    )
+
+    configs = [
+        base_config.replace(
+            DROPOUT=0,
+        ),
+        base_config.replace(
+            DROPOUT=0.1,
+        ),
+        base_config.replace(
+            DROPOUT=0.25,
+        ),
+    ]
+
+    for config in configs:
+        main(cfg=config)
