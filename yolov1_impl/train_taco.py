@@ -3,6 +3,7 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import cv2
 
+import pandas as pd
 import torch.optim as optim
 from tqdm import tqdm
 from torch.utils.data import DataLoader
@@ -199,9 +200,15 @@ def main(cfg: Config):
     # train_dataset = torch.utils.data.Subset(train_dataset, training_portion)
     # test_dataset = torch.utils.data.Subset(test_dataset, testing_portion)
 
-    train_percentage = 0.8
+    # # to use random indices every time
+    # train_percentage = 0.8
+    # train_indices, test_indices = get_stratified_indices(cfg.anns_file_path, len(train_dataset), train_percentage)
 
-    train_indices, test_indices = get_stratified_indices(cfg.anns_file_path, len(train_dataset), train_percentage)
+    train_df = pd.read_csv(cfg.train_indices_path)
+    test_df = pd.read_csv(cfg.test_indices_path)
+
+    train_indices = torch.tensor(train_df['train_indices'].values)
+    test_indices = torch.tensor(test_df['test_indices'].values)
 
     train_dataset = torch.utils.data.Subset(train_dataset, train_indices)
     test_dataset = torch.utils.data.Subset(test_dataset, test_indices)

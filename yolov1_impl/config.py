@@ -20,6 +20,9 @@ class Config:
     DATASET_PATH: str = '../downloads/TACO/data'
     anns_file_path: str = DATASET_PATH + '/' + 'annotations.json'
 
+    train_indices_path: str = 'train_indices-2023-17-11_13-41-46.csv'
+    test_indices_path: str = 'test_indices-2023-17-11_13-41-46.csv'
+
     IMAGE_SIZE: int = 448
     scale: float = 1.12
 
