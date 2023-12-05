@@ -54,8 +54,8 @@ class CoCoDatasetForYOLO(CocoDetection):
             else:
                 boxes.append([x, y, width, height, instance['category_id']])
 
-        if self.transform:
-            augmentations = self.transform(image=image, bboxes=boxes)
+        if self.transforms:
+            augmentations = self.transforms(image=image, bboxes=boxes)
             image = augmentations["image"]
             boxes = augmentations["bboxes"]
 
