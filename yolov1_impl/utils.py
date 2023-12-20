@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torchvision.ops import (
     box_convert,
-    complete_box_iou as iou_func,
+    complete_box_iou,
 )
 import numpy as np
 import matplotlib.pyplot as plt
@@ -53,7 +53,7 @@ def corners_to_midpoint(boxes):
     box_convert(boxes, "xyxy", "cxcywh")
 
 
-def intersection_over_union(boxes_preds, boxes_labels, box_format="midpoint"):
+def intersection_over_union(boxes_preds, boxes_labels, box_format="midpoint", iou_func=complete_box_iou):
     """
     Calculates intersection over union
 
@@ -121,7 +121,7 @@ def non_max_suppression(bboxes, iou_threshold, threshold, box_format="corners"):
 
 
 def mean_average_precision(
-    pred_boxes, true_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=20
+    pred_boxes, true_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=20, print_output=False
 ):
     """
     Calculates mean average precision 
@@ -225,6 +225,23 @@ def mean_average_precision(
         # torch.trapz for numerical integration
         average_precisions.append(torch.trapz(precisions, recalls))
 
+        if print_output:
+            print(f"Class: {c}")
+
+            print(f"TP: {TP_cumsum[-1]}")
+            print(f"FP: {FP_cumsum[-1]}")
+            print(f"\nTrue boxes: {total_true_bboxes}")
+            print(f"\nRecall: {recalls[-1]}")
+            print(f"Precision: {precisions[-1]}")
+
+            plt.plot(recalls.tolist(), precisions.tolist())
+            plt.fill_between(recalls.tolist(), precisions.tolist(), alpha=0.3)
+            plt.grid()
+            axes = plt.gca()
+            axes.set_xlim([0,1])
+            axes.set_ylim([0,1])
+            plt.show()
+
     return sum(average_precisions) / len(average_precisions)
 
 
@@ -235,6 +252,7 @@ def plot_image(image, boxes):
 
     # Create figure and axes
     fig, ax = plt.subplots(1)
+    plt.axis('off')
     # Display the image
     ax.imshow(im)
 
@@ -259,6 +277,34 @@ def plot_image(image, boxes):
         ax.add_patch(rect)
 
     plt.show()
+    
+def plot_image_on_ax(image, boxes, ax):
+    """Plots predicted bounding boxes on the image"""
+    im = np.array(image)
+    height, width, _ = im.shape
+
+    # Display the image
+    ax.imshow(im)
+
+    # box[0] is x midpoint, box[2] is width
+    # box[1] is y midpoint, box[3] is height
+
+    # Create a Rectangle potch
+    for box in boxes:
+        box = box[2:]
+        assert len(box) == 4, "Got more values than in x, y, w, h, in a box!"
+        upper_left_x = box[0] - box[2] / 2
+        upper_left_y = box[1] - box[3] / 2
+        rect = patches.Rectangle(
+            (upper_left_x * width, upper_left_y * height),
+            box[2] * width,
+            box[3] * height,
+            linewidth=1,
+            edgecolor="r",
+            facecolor="none",
+        )
+        # Add the patch to the Axes
+        ax.add_patch(rect)
 
 def get_bboxes(
     loader,
