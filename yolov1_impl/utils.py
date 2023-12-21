@@ -240,6 +240,9 @@ def mean_average_precision(
             axes = plt.gca()
             axes.set_xlim([0,1])
             axes.set_ylim([0,1])
+            
+            plt.xlabel("Recall")
+            plt.ylabel("Precision")
             plt.show()
 
     return sum(average_precisions) / len(average_precisions)
